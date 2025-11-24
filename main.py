@@ -1,6 +1,7 @@
 import discord
 import os
 from dotenv import load_dotenv
+
 class Client(discord.Client):
     async def on_ready(self):
         print(f'Logged in as {self.user}')
@@ -18,6 +19,6 @@ def main():
     client = Client(intents=intents)
     load_dotenv()
     client.run(os.getenv('DISCORD_BOT_TOKEN'))
-    
+
 if __name__ == "__main__":
     main()
