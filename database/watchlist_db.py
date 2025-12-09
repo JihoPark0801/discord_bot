@@ -40,10 +40,10 @@ def remove_from_watchlist(user_id, ticker):
 def get_watchlist(user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT ticker, added_at FROM watchlist WHERE user_id = ? ORDER BY added_at', (user_id,))
+    cursor.execute('SELECT ticker FROM watchlist WHERE user_id = ? ORDER BY added_at', (user_id,))
     rows = cursor.fetchall()
     conn.close()
-    return rows
+    return [row[0] for row in rows]
 
 def get_watchlist_count(user_id):
     conn = sqlite3.connect(DB_PATH)
