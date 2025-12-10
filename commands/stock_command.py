@@ -9,7 +9,7 @@ class StockCommand(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="stock", description="Get the current stock price for a given ticker symbol.")
+    @app_commands.command(name="price", description="Get the current stock price for a given ticker symbol.")
     @app_commands.guilds(discord.Object(id=os.getenv('DISCORD_GUILD_ID')))
     async def stock(self, interaction: discord.Interaction, ticker_symbol: str):
         await interaction.response.defer()  # Acknowledge the command to avoid timeout
