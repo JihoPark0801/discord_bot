@@ -29,6 +29,7 @@ class WatchlistCommand(commands.Cog):
                 await interaction.followup.send(f"Invalid ticker: {ticker}")
         except Exception as e:
             await interaction.followup.send("An error has occured. Please try again.")
+            
     @app_commands.command(name="watchlist_remove", description= "Remove a stock from your watchlist")
     @app_commands.guilds(discord.Object(id=os.getenv('DISCORD_GUILD_ID')))
     async def remove_watchlist(self, interaction: discord.Interaction, ticker: str):
@@ -60,7 +61,7 @@ class WatchlistCommand(commands.Cog):
         for ticker in ticker_list:
             stock_price = get_stock_price(ticker)
             price_display = f"${stock_price:.2f}" if stock_price else "N/A"
-            embed.add_field(name=f"{ticker}", value=price_display, inline=True)
+            embed.add_field(name=f"{ticker}", value=price_display, inline=False)
         
         embed.set_footer(text=f"Total stocks: {len(ticker_list)}")
         embed.timestamp = discord.utils.utcnow()
