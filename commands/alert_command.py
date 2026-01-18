@@ -41,6 +41,49 @@ class AlertCommand(commands.Cog):
                     'target_price': target_price,
                     'alert_type': alert_type
                 })
+
+            # Check each ticker
+            for ticker, alerts_list in alerts_by_ticker.items():
+                try:
+                    # Get current price (one API call per ticker)
+                    current_price = get_stock_price(ticker)
+                    
+                    if current_price is None:
+                        print(f"⚠️ Could not get price for {ticker}")
+                        continue  # Skip this ticker, move to next
+                    
+                    # Check each alert for this ticker
+                    for alert in alerts_list:
+                        try:
+                            should_trigger = False
+                            
+                            # Check if alert should trigger
+                            if alert['alert_type'] == 'above' and current_price >= alert['target_price']:
+                                should_trigger = True
+                            elif alert['alert_type'] == 'below' and current_price <= alert['target_price']:
+                                should_trigger = True
+                            
+                            if should_trigger:
+                                print(f"🔔 Alert triggered: {ticker} {alert['alert_type']} ${alert['target_price']}")
+                                
+                                # Try to DM the user
+                                try:
+                                    await self.send_alert_dm(alert, current_price)
+                                except Exception as e:
+                                    print(f"⚠️ Failed to DM user {alert['user_id']}: {e}")
+                                
+                                # Delete alert regardless of DM success
+                                delete_alert(alert['id'])
+                                print(f"✅ Deleted alert {alert['id']}")
+                                
+                        except Exception as e:
+                            print(f"❌ Error processing alert {alert.get('id')}: {e}")
+                            continue  # Keep checking other alerts
+                            
+                except Exception as e:
+                    print(f"❌ Error checking ticker {ticker}: {e}")
+                    continue  # Keep checking other tickers
+            
             
         except Exception as e:
             print(f"Alert task error: {e}")
@@ -49,6 +92,29 @@ class AlertCommand(commands.Cog):
     async def before_check_alerts(self):
         await self.bot.wait_until_ready()
         print("Alert checking task started!")
+    
+    async def send_alert_dm(self, alert, current_price):
+        """Send a DM to user when their alert triggers"""
+        user = await self.bot.fetch_user(int(alert['user_id']))
+        
+        # Determine emoji
+        emoji = "📈" if alert['alert_type'] == 'above' else "📉"
+        
+        # Create embed
+        embed = discord.Embed(
+            title="🔔 Price Alert Triggered!",
+            description=f"{emoji} **{alert['ticker']}** has reached your target price!",
+            color=discord.Color.green()
+        )
+        
+        embed.add_field(name="Target Price", value=f"${alert['target_price']:.2f}", inline=True)
+        embed.add_field(name="Current Price", value=f"${current_price:.2f}", inline=True)
+        embed.add_field(name="Alert Type", value=alert['alert_type'].capitalize(), inline=True)
+        
+        embed.set_footer(text="Your alert has been automatically removed.")
+        embed.timestamp = discord.utils.utcnow()
+        
+        await user.send(embed=embed)
         
 
     @app_commands.command(name="alert_add", description="Add a price alert")
