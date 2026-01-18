@@ -33,7 +33,7 @@ def add_alert(user_id, ticker, target_price, alert_type):
 def get_user_alerts(user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT id, ticker, target_price, alert_type, created_at FROM alerts WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+    cursor.execute('SELECT ticker, target_price, alert_type, created_at FROM alerts WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
     rows = cursor.fetchall()
     conn.close()
     return rows
@@ -46,7 +46,6 @@ def remove_alert(user_id, ticker, target_price):
     conn.commit()
     conn.close()
     return rows > 0
-
 
 def delete_alert(alert_id):
     conn = sqlite3.connect(DB_PATH)
