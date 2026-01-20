@@ -79,7 +79,7 @@ def update_cash_balance(user_id, new_balance):
 def get_user_portfolio(user_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT ticker, quantity, avg_cost WHERE user_id = ? ORDER BY ticker', (user_id,))
+    cursor.execute('SELECT ticker, quantity, avg_cost FROM portfolio WHERE user_id = ? ORDER BY ticker', (user_id,))
     rows = cursor.fetchall()
     conn.close()
     return rows
@@ -87,7 +87,7 @@ def get_user_portfolio(user_id):
 def get_position(user_id, ticker):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT quantity, avg_cost WHERE user_id = ? AND ticker = ?', (user_id, ticker))
+    cursor.execute('SELECT quantity, avg_cost FROM portfolio WHERE user_id = ? AND ticker = ?', (user_id, ticker))
     row = cursor.fetchone()
     conn.close()
     return row
@@ -127,6 +127,46 @@ def reduce_or_remove_position(user_id, ticker, quantity):
     else:
         new_quantity = row[0] - quantity
         cursor.execute('UPDATE portfolio SET quantity = ? WHERE user_id = ? AND ticker = ?',(new_quantity, user_id, ticker))
+    conn.commit()
+    conn.close()
+    return True
+
+def record_transaction(user_id, ticker, transaction_type, quantity, price, total_cost):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO transactions (user_id, ticker, transaction_type, quantity, price, total_cost) VALUES (?,?,?,?,?,?)', (user_id, ticker, transaction_type, quantity, price, total_cost))
+    conn.commit()
+    conn.close()
+
+def get_user_transactions(user_id, ticker=None):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    if ticker is None:
+        cursor.execute('SELECT ticker, transaction_type, quantity, price, total_cost, timestamp FROM transactions WHERE user_id = ? ORDER BY timestamp DESC', (user_id,))
+    else:
+        cursor.execute('SELECT ticker, transaction_type, quantity, price, total_cost, timestamp FROM transactions WHERE user_id = ? AND ticker = ? ORDER BY timestamp DESC', (user_id, ticker))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def reset_portfolio(user_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT starting_balance FROM users WHERE user_id = ?', (user_id,))
+    row = cursor.fetchone()
+
+    if row is None:
+        conn.close()
+        return False
+    
+    starting_balance = row[0]
+
+    cursor.execute('DELETE FROM portfolio WHERE user_id = ?', (user_id,))
+    cursor.execute('DELETE FROM transactions WHERE user_id = ?', (user_id,))
+    cursor.execute('UPDATE users SET cash_balance = ? WHERE user_id = ?', (starting_balance, user_id))
     conn.commit()
     conn.close()
     return True
