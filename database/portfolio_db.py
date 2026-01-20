@@ -95,4 +95,38 @@ def get_position(user_id, ticker):
 def add_or_update_position(user_id, ticker, quantity, price):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    cursor.execute('SELECT quantity, avg_cost FROM portfolio WHERE user_id = ? AND ticker = ?', (user_id, ticker))
+    row = cursor.fetchone()
+    if row:
+        existing_quantity = row[0]
+        existing_avg_cost = row[1]
+        new_avg_cost = (existing_quantity * existing_avg_cost + quantity * price) / (existing_quantity + quantity)
+        new_quantity = existing_quantity + quantity
+        cursor.execute('UPDATE portfolio SET avg_cost = ?, quantity = ? WHERE user_id = ? AND ticker = ?', (new_avg_cost, new_quantity, user_id, ticker))
+    else:
+        cursor.execute("INSERT INTO portfolio (user_id, ticker, quantity, avg_cost) VALUES (?,?,?,?)", (user_id, ticker, quantity, price))
+
+    conn.commit()
+    conn.close()
+
+def reduce_or_remove_position(user_id, ticker, quantity):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT quantity FROM portfolio WHERE user_id = ? AND ticker = ?', (user_id, ticker))
+    row = cursor.fetchone()
+    if row is None:
+        conn.close()
+        return False
     
+    if quantity > row[0]:
+        conn.close()
+        return False
+    
+    if row[0] == quantity:
+        cursor.execute('DELETE FROM portfolio WHERE user_id = ? AND ticker = ?', (user_id,ticker))
+    else:
+        new_quantity = row[0] - quantity
+        cursor.execute('UPDATE portfolio SET quantity = ? WHERE user_id = ? AND ticker = ?',(new_quantity, user_id, ticker))
+    conn.commit()
+    conn.close()
+    return True
