@@ -9,6 +9,7 @@ from pathlib import Path
 
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(env_path)
+
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.stocks import get_stock_price
