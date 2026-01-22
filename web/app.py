@@ -1,17 +1,36 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for, session, request
 import sqlite3
 import os
 import sys
+import requests
+from dotenv import load_dotenv
+from pathlib import Path
 
+
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(env_path)
+# Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.stocks import get_stock_price
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)  # Secret key for sessions
 
-DB_PATH = '../portfolio.db'  # Adjust as needed
-WATCHLIST_DB_PATH = '../watchlist.db'  # Adjust as needed
-ALERTS_DB_PATH = '../alerts.db'  # Adjust as needed
+# Database paths
+DB_PATH = '../portfolio.db'
+WATCHLIST_DB_PATH = '../watchlist.db'
+ALERTS_DB_PATH = '../alerts.db'
 
+# Discord OAuth settings
+DISCORD_CLIENT_ID = os.getenv('DISCORD_CLIENT_ID')
+DISCORD_CLIENT_SECRET = os.getenv('DISCORD_CLIENT_SECRET')
+DISCORD_REDIRECT_URI = os.getenv('DISCORD_REDIRECT_URI')
+DISCORD_API_URL = 'https://discord.com/api/v10'
+DISCORD_OAUTH_URL = f'{DISCORD_API_URL}/oauth2/authorize'
+DISCORD_TOKEN_URL = f'{DISCORD_API_URL}/oauth2/token'
+DISCORD_USER_URL = f'{DISCORD_API_URL}/users/@me'
+
+# Database helper functions
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -19,7 +38,6 @@ def get_db_connection():
 
 def get_user_portfolio(user_id):
     """Get user's portfolio data with current prices"""
-    # ... your existing function stays the same ...
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -130,7 +148,6 @@ def get_user_alerts(user_id):
             alert_type = alert['alert_type']
             current_price = get_stock_price(ticker)
             
-            # Calculate distance to target
             if current_price:
                 distance = abs(current_price - target_price)
             else:
@@ -148,18 +165,82 @@ def get_user_alerts(user_id):
     except:
         return []
 
+# Routes
 @app.route('/')
 def home():
+    # Check if user is logged in
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
     return render_template('index.html')
 
-@app.route('/portfolio/<user_id>')
-def portfolio(user_id):
+@app.route('/login')
+def login():
+    """Redirect to Discord OAuth"""
+    discord_login_url = f"{DISCORD_OAUTH_URL}?client_id={DISCORD_CLIENT_ID}&redirect_uri={DISCORD_REDIRECT_URI}&response_type=code&scope=identify"
+    return redirect(discord_login_url)
+
+@app.route('/callback')
+def callback():
+    """Handle Discord OAuth callback"""
+    code = request.args.get('code')
+    
+    if not code:
+        return "Error: No code provided", 400
+    
+    # Exchange code for access token
+    data = {
+        'client_id': DISCORD_CLIENT_ID,
+        'client_secret': DISCORD_CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': DISCORD_REDIRECT_URI
+    }
+    
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    
+    response = requests.post(DISCORD_TOKEN_URL, data=data, headers=headers)
+    
+    if response.status_code != 200:
+        return f"Error getting token: {response.text}", 400
+    
+    token_data = response.json()
+    access_token = token_data['access_token']
+    
+    # Get user info
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
+    
+    user_response = requests.get(DISCORD_USER_URL, headers=headers)
+    
+    if user_response.status_code != 200:
+        return "Error getting user info", 400
+    
+    user_data = user_response.json()
+    
+    # Store user info in session
+    session['user_id'] = user_data['id']
+    session['username'] = user_data['username']
+    session['avatar'] = user_data.get('avatar')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/dashboard')
+def dashboard():
+    """Main dashboard - requires login"""
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    username = session.get('username', 'User')
+    
     portfolio_data = get_user_portfolio(user_id)
     
     if not portfolio_data:
-        return "User not found. Please run /portfolio_start in Discord first."
+        return render_template('no_account.html', username=username)
     
-    # Get watchlist and alerts
     watchlist_data = get_user_watchlist(user_id)
     alerts_data = get_user_alerts(user_id)
     
@@ -167,7 +248,14 @@ def portfolio(user_id):
                          data=portfolio_data, 
                          watchlist=watchlist_data,
                          alerts=alerts_data,
-                         user_id=user_id)
+                         user_id=user_id,
+                         username=username)
+
+@app.route('/logout')
+def logout():
+    """Logout user"""
+    session.clear()
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
