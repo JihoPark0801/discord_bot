@@ -1,6 +1,6 @@
 import sqlite3
 
-DB_PATH = 'portfolio_db'
+DB_PATH = 'portfolio.db'
 
 def initialize_portfolio_db():
     conn = sqlite3.connect(DB_PATH)
