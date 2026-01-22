@@ -26,8 +26,6 @@ A full-featured Discord bot for virtual stock trading with an interactive web da
 - **Comprehensive View** - Portfolio, watchlist, and alerts all in one place
 - **Profit/Loss Tracking** - See your gains and losses at a glance
 
-## 📸 Screenshots
-
 ### Discord Bot Commands
 ```
 /portfolio_start - Create your account
@@ -40,6 +38,8 @@ A full-featured Discord bot for virtual stock trading with an interactive web da
 
 ### Web Dashboard
 *[Your dashboard showing portfolio, charts, watchlist, and alerts]*
+<img width="957" height="882" alt="image" src="https://github.com/user-attachments/assets/1be2ff9c-1ced-439f-a3af-989c8de47da5" />
+
 
 ## 🛠️ Tech Stack
 
@@ -175,3 +175,4 @@ Visit: `http://127.0.0.1:5001`
 #### Utilities
 - `/stock <ticker>` - Get current stock price
 - `/dashboard` - Get link to web dashboard
+
