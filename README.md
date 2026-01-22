@@ -176,3 +176,37 @@ Visit: `http://127.0.0.1:5001`
 - `/stock <ticker>` - Get current stock price
 - `/dashboard` - Get link to web dashboard
 
+## 📁 Project Structure
+```
+discord-stock-bot/
+├── main.py                      # Discord bot entry point
+├── requirements.txt             # Python dependencies
+├── Procfile                     # Deployment configuration
+├── .env                         # Environment variables (not in repo)
+├── .gitignore                   # Git ignore file
+│
+├── api/
+│   └── stocks.py                # Stock price API integration
+│
+├── commands/                    # Discord bot commands
+│   ├── stock_command.py         # Stock lookup commands
+│   ├── watchlist_commands.py   # Watchlist management
+│   ├── alert_commands.py       # Price alert commands
+│   ├── portfolio_commands.py   # Trading commands
+│   └── dashboard_command.py    # Dashboard link command
+│
+├── database/                    # Database operations
+│   ├── watchlist_db.py         # Watchlist database functions
+│   ├── alerts_db.py            # Alerts database functions
+│   └── portfolio_db.py         # Portfolio database functions
+│
+└── web/                         # Flask web application
+    ├── app.py                   # Flask entry point
+    ├── templates/               # HTML templates
+    │   ├── index.html          # Landing page
+    │   ├── portfolio.html      # Dashboard
+    │   └── no_account.html     # No account page
+    └── static/                  # Static assets (if needed)
+```
+
+
